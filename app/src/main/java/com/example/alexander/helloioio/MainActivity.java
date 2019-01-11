@@ -1,22 +1,26 @@
 package com.example.alexander.helloioio;
 
 import android.content.Context;
-import android.support.v7.app.AppCompatActivity;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import org.w3c.dom.Text;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
-import io.github.controlwear.virtual.joystick.android.JoystickView;
 import ioio.lib.api.DigitalOutput;
 import ioio.lib.api.IOIO;
 import ioio.lib.api.IOIO.VersionType;
@@ -26,9 +30,10 @@ import ioio.lib.util.BaseIOIOLooper;
 import ioio.lib.util.IOIOLooper;
 import ioio.lib.util.android.IOIOActivity;
 
+import static android.content.ContentValues.TAG;
 import static java.lang.Math.abs;
 
-public class  MainActivity extends IOIOActivity {
+public class  MainActivity extends IOIOActivity implements SensorEventListener {
 
     private int SPEED, SPEED2;
     private int ANGLE;
@@ -49,14 +54,22 @@ public class  MainActivity extends IOIOActivity {
     private TextView tvAngle;
     private TextView tvDirection;
 
-    private SeekBar sbTopServo;
-    private SeekBar sbBotomServo;
-
     private ToggleButton tbTest;
 
     private Button forwardBtn, backwardBtn, rightBtn, leftBtn, setSpd;
+    private Button btnStart, btnStop;
 
     private EditText textSetSpdL, textSetSpdR;
+    private boolean isStarted = false;
+
+    private float currentDegree = 0f;
+    private float prevDegree = 0f;
+
+    private SensorManager mSensorManager;
+
+    private FirebaseDatabase database;
+    private DatabaseReference myRef;
+    private float turnedRight, degree;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,101 +82,184 @@ public class  MainActivity extends IOIOActivity {
         ANGLE = 0;
         DIRECTION = "Idle";
 
-        forwardBtn = findViewById(R.id.btnForward);
-        backwardBtn = findViewById(R.id.btnBackward);
+//        forwardBtn = findViewById(R.id.btnForward);
+//        backwardBtn = findViewById(R.id.btnBackward);
         leftBtn = findViewById(R.id.btnLeft);
         rightBtn = findViewById(R.id.btnRight);
 
-        setSpd = findViewById(R.id.btnSetSpeed);
-        textSetSpdL = findViewById(R.id.setSpd);
-        textSetSpdR = findViewById(R.id.setSpd2);
+        btnStart = findViewById(R.id.btnStart);
+        btnStop = findViewById(R.id.btnStop);
+
+//        setSpd = findViewById(R.id.btnSetSpeed);
+//        textSetSpdL = findViewById(R.id.setSpd);
+//        textSetSpdR = findViewById(R.id.setSpd2);
 
         tvDirection = (TextView) findViewById(R.id.tvDirection);
         tvDirection.setText(DIRECTION);
 
-        setSpd.setOnClickListener(new View.OnClickListener() {
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        database = FirebaseDatabase.getInstance();
+        myRef = database.getReference("heading");
+
+//        setSpd.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                SPEED = Integer.parseInt(textSetSpdL.getText().toString());
+//                SPEED2 = Integer.parseInt(textSetSpdR.getText().toString());
+//            }
+//        });
+
+//        forwardBtn.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                if(event.getAction() == MotionEvent.ACTION_DOWN) {
+//                    FORWARD = true;
+//                    BACKWARD = false;
+//                    RIGHT = false;
+//                    LEFT = false;
+//                    IDLE = false;
+//                    tvDirection.setText(strDirection());
+//                }
+//                else if(event.getAction() == MotionEvent.ACTION_UP){
+//                    idle();
+//                    tvDirection.setText("Idle");
+//                }
+//                return false;
+//            }
+//        });
+
+//        backwardBtn.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                if(event.getAction() == MotionEvent.ACTION_DOWN) {
+//                    FORWARD = false;
+//                    BACKWARD = true;
+//                    RIGHT = false;
+//                    LEFT = false;
+//                    IDLE = false;
+//                    tvDirection.setText(strDirection());
+//                }
+//                else if(event.getAction() == MotionEvent.ACTION_UP){
+//                    idle();
+//                    tvDirection.setText("Idle");
+//                }
+//                return false;
+//            }
+//        });
+
+        btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SPEED = Integer.parseInt(textSetSpdL.getText().toString());
-                SPEED2 = Integer.parseInt(textSetSpdR.getText().toString());
+                FORWARD=true;
+                BACKWARD=false;
+                RIGHT=false;
+                LEFT=false;
+                IDLE=false;
+                tvDirection.setText(strDirection());
+                isStarted = true;
             }
         });
 
-        forwardBtn.setOnTouchListener(new View.OnTouchListener() {
+        btnStop.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    FORWARD = true;
-                    BACKWARD = false;
-                    RIGHT = false;
-                    LEFT = false;
-                    IDLE = false;
+            public void onClick(View v) {
+                FORWARD=false;
+                BACKWARD=false;
+                RIGHT=false;
+                LEFT=false;
+                IDLE=true;
+                tvDirection.setText(strDirection());
+                isStarted = false;
+            }
+        });//kira kira ini dah bisa jalan dengan start (auto-forward) dan berhenti dengan stop (auto-idle)
+
+        leftBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FORWARD = false;
+                BACKWARD = false;
+                RIGHT = false;
+                LEFT = true;
+                IDLE = false;
+                tvDirection.setText(strDirection());
+                try {
+                    Thread.sleep(2000);
+                    FORWARD=true;
+                    BACKWARD=false;
+                    RIGHT=false;
+                    LEFT=false;
+                    IDLE=false;
                     tvDirection.setText(strDirection());
+                    isStarted = true;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                else if(event.getAction() == MotionEvent.ACTION_UP){
-                    idle();
-                    tvDirection.setText("Idle");
-                }
-                return false;
             }
         });
 
-        backwardBtn.setOnTouchListener(new View.OnTouchListener() {
+        rightBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    FORWARD = false;
-                    BACKWARD = true;
-                    RIGHT = false;
-                    LEFT = false;
-                    IDLE = false;
+            public void onClick(View v) {
+                FORWARD = false;
+                BACKWARD = false;
+                RIGHT = true;
+                LEFT = false;
+                IDLE = false;
+                tvDirection.setText(strDirection());
+                turnedRight = (degree>=90) ? (degree - 90) : 270 + x;//update ini dengan ternary operator
+                try {
+                    Thread.sleep(2000);
+                    FORWARD=true;
+                    BACKWARD=false;
+                    RIGHT=false;
+                    LEFT=false;
+                    IDLE=false;
                     tvDirection.setText(strDirection());
+                    isStarted = true;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                else if(event.getAction() == MotionEvent.ACTION_UP){
-                    idle();
-                    tvDirection.setText("Idle");
-                }
-                return false;
             }
         });
 
-        leftBtn.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    FORWARD = false;
-                    BACKWARD = false;
-                    RIGHT = false;
-                    LEFT = true;
-                    IDLE = false;
-                    tvDirection.setText(strDirection());
-                }
-                else if(event.getAction() == MotionEvent.ACTION_UP){
-                    idle();
-                    tvDirection.setText("Idle");
-                }
-                return false;
-            }
-        });
-
-        rightBtn.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    FORWARD = false;
-                    BACKWARD = false;
-                    RIGHT = true;
-                    LEFT = false;
-                    IDLE = false;
-                    tvDirection.setText(strDirection());
-                }
-                else if(event.getAction() == MotionEvent.ACTION_UP){
-                    idle();
-                    tvDirection.setText("Idle");
-                }
-                return false;
-            }
-        });
+//        leftBtn.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                if(event.getAction() == MotionEvent.ACTION_DOWN) {
+//                    FORWARD = false;
+//                    BACKWARD = false;
+//                    RIGHT = false;
+//                    LEFT = true;
+//                    IDLE = false;
+//                    tvDirection.setText(strDirection());
+//                }
+//                else if(event.getAction() == MotionEvent.ACTION_UP){
+//                    idle();
+//                    tvDirection.setText("Idle");
+//                }
+//                return false;
+//            }
+//        });
+//
+//        rightBtn.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                if(event.getAction() == MotionEvent.ACTION_DOWN) {
+//                    FORWARD = false;
+//                    BACKWARD = false;
+//                    RIGHT = true;
+//                    LEFT = false;
+//                    IDLE = false;
+//                    tvDirection.setText(strDirection());
+//                }
+//                else if(event.getAction() == MotionEvent.ACTION_UP){
+//                    idle();
+//                    tvDirection.setText("Idle");
+//                }
+//                return false;
+//            }
+//        });
 
 //        joystick.setOnMoveListener(new JoystickView.OnMoveListener() {
 //            @Override
@@ -214,6 +310,53 @@ public class  MainActivity extends IOIOActivity {
         else return "";
     };
 
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        degree = Math.round(event.values[0]);
+
+        if(degree != prevDegree) {
+
+            myRef.setValue(degree);
+
+            myRef.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    // This method is called once with the initial value and again
+                    // whenever data at this location is updated.
+                    Double value = dataSnapshot.getValue(Double.class);
+                    Log.d(TAG, "Value is: " + value);
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    // Failed to read value
+                    Log.w(TAG, "Failed to read value.", error.toException());
+                }
+            });
+        }
+        prevDegree = degree;
+
+        currentDegree = -degree;
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+                SensorManager.SENSOR_DELAY_GAME);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(this);
+    }
+
     class Looper extends BaseIOIOLooper {
 
         private DigitalOutput led_;
@@ -252,26 +395,33 @@ public class  MainActivity extends IOIOActivity {
 //            FrontLeftPWM.setDutyCycle((float)0.5);
 //            FrontLeft_1.write(false);
 
-            if(FORWARD){
+            if(FORWARD&&isStarted){
+                SPEED=78;//jika mau diganti jadi dynamic, hapus assignment speed ini
+                SPEED2=55;
                 FrontLeft(SPEED);//SPEED=78
                 FrontRight(SPEED2);//SPEED=55
             }
 
             else if(BACKWARD){
+                SPEED=1;
+                SPEED2=100;
                 FrontLeft(SPEED);//SPEED=1
                 FrontRight(-SPEED2);//SPEED2=-100
+
             }
 
             else if(RIGHT){
+                SPEED=78;
                 SPEED2=0;
-                FrontRight(SPEED2);//SPEED2=0
                 FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
+                FrontRight(SPEED2);//SPEED2=0
             }
 
             else if(LEFT){
                 SPEED=0;
-                FrontRight(SPEED2);//SPEED2=100
+                SPEED2=100;
                 FrontLeft(SPEED);//SPEED=0
+                FrontRight(SPEED2);//SPEED2=100
             }
 //            else if(FRONT_RIGHT){
 //                FrontRight(SPEED/2);
@@ -381,7 +531,7 @@ public class  MainActivity extends IOIOActivity {
         });
     }
 
-    private int numConnected_ = 0;
+//    private int numConnected_ = 0;
 
 //    private void enableUi(final boolean enable) {
 //        runOnUiThread(new Runnable() {

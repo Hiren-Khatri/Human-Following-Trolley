@@ -59,6 +59,9 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
     private Button forwardBtn, backwardBtn, rightBtn, leftBtn, setSpd;
     private Button btnStart, btnStop;
 
+    private TextView tvDegree;
+    private TextView tvCurrDegree;
+
     private EditText textSetSpdL, textSetSpdR;
     private boolean isStarted = false;
 
@@ -70,6 +73,12 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
     private FirebaseDatabase database;
     private DatabaseReference myRef;
     private float turnedRight, degree;
+
+    private float currDegree = 0f;
+    private Boolean turnRight = false;
+    private Boolean turnLeft = false;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,6 +98,11 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
 
         btnStart = findViewById(R.id.btnStart);
         btnStop = findViewById(R.id.btnStop);
+
+        tvDegree = findViewById(R.id.tvDegree);
+        tvCurrDegree = findViewById(R.id.tvCurrDegree);
+
+
 
 //        setSpd = findViewById(R.id.btnSetSpeed);
 //        textSetSpdL = findViewById(R.id.setSpd);
@@ -177,113 +191,77 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
         leftBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FORWARD = false;
-                BACKWARD = false;
-                RIGHT = false;
-                LEFT = true;
-                IDLE = false;
-                tvDirection.setText(strDirection());
-                try {
-                    Thread.sleep(2000);
-                    FORWARD=true;
-                    BACKWARD=false;
-                    RIGHT=false;
-                    LEFT=false;
-                    IDLE=false;
-                    tvDirection.setText(strDirection());
-                    isStarted = true;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                turnLeft = true;
             }
         });
 
         rightBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FORWARD = false;
-                BACKWARD = false;
-                RIGHT = true;
-                LEFT = false;
-                IDLE = false;
-                tvDirection.setText(strDirection());
-                turnedRight = (degree>=90) ? (degree - 90) : 270 + x;//update ini dengan ternary operator
-                try {
-                    Thread.sleep(2000);
-                    FORWARD=true;
-                    BACKWARD=false;
-                    RIGHT=false;
-                    LEFT=false;
-                    IDLE=false;
-                    tvDirection.setText(strDirection());
-                    isStarted = true;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                turnRight = true;
             }
         });
 
-//        leftBtn.setOnTouchListener(new View.OnTouchListener() {
-//            @Override
-//            public boolean onTouch(View v, MotionEvent event) {
-//                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-//                    FORWARD = false;
-//                    BACKWARD = false;
-//                    RIGHT = false;
-//                    LEFT = true;
-//                    IDLE = false;
-//                    tvDirection.setText(strDirection());
-//                }
-//                else if(event.getAction() == MotionEvent.ACTION_UP){
-//                    idle();
-//                    tvDirection.setText("Idle");
-//                }
-//                return false;
-//            }
-//        });
-//
-//        rightBtn.setOnTouchListener(new View.OnTouchListener() {
-//            @Override
-//            public boolean onTouch(View v, MotionEvent event) {
-//                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-//                    FORWARD = false;
-//                    BACKWARD = false;
-//                    RIGHT = true;
-//                    LEFT = false;
-//                    IDLE = false;
-//                    tvDirection.setText(strDirection());
-//                }
-//                else if(event.getAction() == MotionEvent.ACTION_UP){
-//                    idle();
-//                    tvDirection.setText("Idle");
-//                }
-//                return false;
-//            }
-//        });
+        Runnable checkTurnLeft = new Runnable() {
+            @Override
+            public void run() {
+                while (currDegree!=degree) {
+                    try {
+                        Thread.sleep(1000); // Waits for 1 second (1000 milliseconds)
+                        tvDegree.setText("Degree = " + String.valueOf(degree) + " [Turn Left]");
+                        tvCurrDegree.setText("CurrDegree = " + String.valueOf(currDegree) + " [Turn Left]");
+                        turningLeft();
+                        if(degree==currDegree){
+                            idle();
+                            turnLeft = false;
+                            break;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
 
-//        joystick.setOnMoveListener(new JoystickView.OnMoveListener() {
-//            @Override
-//            public void onMove(int angle, int strength) {
-//                SPEED = strength;
-//
-//                tvSpeed.setText("Speed = " + SPEED);
-//
-//                setDirection(angle);
-//
-//                tvDirection.setText(strDirection());
-//
-//                Log.i("debug_dong", String.valueOf(RIGHT) + "\n" +
-//                        String.valueOf(FRONT_RIGHT) + "\n" +
-//                        String.valueOf(FORWARD) + "\n" +
-//                        String.valueOf(FRONT_LEFT) + "\n" +
-//                        String.valueOf(LEFT) + "\n" +
-//                        String.valueOf(BACK_LEFT) + "\n" +
-//                        String.valueOf(BACKWARD) + "\n" +
-//                        String.valueOf(BACK_RIGHT) + "\n");
-//            }
-//        });
+        Runnable checkTurnRight = new Runnable() {
+            @Override
+            public void run() {
+                while (currDegree!=degree) {
+                    try {
+                        Thread.sleep(1000); // Waits for 1 second (1000 milliseconds)
+                        tvDegree.setText("Degree = " + String.valueOf(degree) + " [Turn Right]");
+                        tvCurrDegree.setText("CurrDegree = " + String.valueOf(currDegree) + " [Turn Right]");
+                        turningRight();
+                        if(degree==currDegree){
+                            idle();
+                            turnRight = false;
+                            break;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
 
 
+
+    }
+
+    public void turningLeft(){
+        IDLE = false;
+        FORWARD = false;
+        BACKWARD = false;
+        RIGHT = false;
+        LEFT = true;
+    }
+
+    public void turningRight(){
+        IDLE = false;
+        FORWARD = false;
+        BACKWARD = false;
+        RIGHT = true;
+        LEFT = false;
     }
     public void idle(){
         IDLE = true;
@@ -291,10 +269,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
         BACKWARD = false;
         RIGHT = false;
         LEFT = false;
-//        FRONT_RIGHT = false;//uncomment if using 8 directional movement
-//        FRONT_LEFT = false;
-//        BACK_RIGHT = false;
-//        BACK_LEFT = false;
     }
 
     public String strDirection(){
@@ -302,10 +276,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
         else if(RIGHT) return "RIGHT";
         else if(LEFT) return "LEFT";
         else if(BACKWARD) return "BACKWARD";
-//        else if(FRONT_RIGHT) return "FRONT RIGHT"; //uncomment if using 8 directional movement
-//        else if(FRONT_LEFT) return "FRONT LEFT";
-//        else if(BACK_RIGHT) return "BACK RIGHT";
-//        else if(BACK_LEFT) return "BACK LEFT";
         else if(IDLE) return "IDLE";
         else return "";
     };
@@ -313,6 +283,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
         degree = Math.round(event.values[0]);
+        tvDegree.setText("Degree = " + String.valueOf(degree));
 
         if(degree != prevDegree) {
 
@@ -390,11 +361,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
         public void loop() throws ConnectionLostException, InterruptedException {
             led_.write(false);
 
-//            FrontRightPWM.setDutyCycle((float)0.5);
-//            FrontRight_1.write(false);
-//            FrontLeftPWM.setDutyCycle((float)0.5);
-//            FrontLeft_1.write(false);
-
             if(FORWARD&&isStarted){
                 SPEED=78;//jika mau diganti jadi dynamic, hapus assignment speed ini
                 SPEED2=55;
@@ -423,6 +389,86 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener {
                 FrontLeft(SPEED);//SPEED=0
                 FrontRight(SPEED2);//SPEED2=100
             }
+
+            else if(turnLeft){
+                tvDirection.setText(strDirection());
+
+                if(degree >=90){
+                    currDegree = degree - 90;
+                }
+                else {
+                    currDegree = degree + 270;
+                }
+//                turnLeftThread.start();//cari cara pasang thread di sini
+
+//                while(currDegree!=degree) {
+//                    tvDegree.setText("Degree = " + String.valueOf(degree) + " [Turn Left]");
+//                    tvCurrDegree.setText("CurrDegree = " + String.valueOf(currDegree) + " [Turn Left]");
+//
+//                    turningLeft();
+//                    if(degree==currDegree){
+//                        idle();
+//                        break;
+//                    }
+//                    turnLeft = false;
+//                }
+
+                try {
+                    Thread.sleep(2000);
+                    FORWARD=true;
+                    BACKWARD=false;
+                    RIGHT=false;
+                    LEFT=false;
+                    IDLE=false;
+                    tvDirection.setText(strDirection());
+                    isStarted = true;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            else if(turnRight){
+                tvDegree.setText("[Masuk]");
+//                tvDirection.setText(strDirection());
+//                currDegree = degree;
+//
+//                if(degree >=270){
+//                    currDegree = degree - 270;
+//                }
+//                else {
+//                    currDegree = degree + 90;
+//
+//                }
+////                turningRight();
+//                tvDegree.setText("Degree = " + String.valueOf(degree) + " [Turn Right]");
+//                tvCurrDegree.setText("CurrDegree = " + String.valueOf(currDegree) + " [Turn Right]");
+//                do{
+//                    tvDegree.setText("Degree = " + String.valueOf(degree) + " [Turn Right]");
+//                    tvCurrDegree.setText("CurrDegree = " + String.valueOf(currDegree) + " [Turn Right]");
+//                    turningRight();
+////                    Log.i("degreee", "Degree = " + String.valueOf(degree) + "\nCurrDegree = " + String.valueOf(currDegree));
+//
+//                    if(degree==currDegree){
+//                        idle();
+//                    }
+//                }
+//                while(currDegree!=degree);
+//
+//                try {
+//                    Thread.sleep(2000);
+//                    FORWARD=true;
+//                    BACKWARD=false;
+//                    RIGHT=false;
+//                    LEFT=false;
+//                    IDLE=false;
+//                    tvDirection.setText(strDirection());
+//                    isStarted = true;
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+                turnRight = false;
+            }
+
 //            else if(FRONT_RIGHT){
 //                FrontRight(SPEED/2);
 //                FrontLeft(SPEED);

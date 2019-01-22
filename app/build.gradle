@@ -33,6 +33,7 @@ dependencies {
     implementation 'io.github.controlwear:virtualjoystick:0.9.9'
     implementation 'com.google.firebase:firebase-core:16.0.6'
     implementation 'com.google.firebase:firebase-database:16.0.5'
+    implementation 'me.dm7.barcodescanner:zxing:1.9.8'
 }
 
 apply plugin: 'com.google.gms.google-services'

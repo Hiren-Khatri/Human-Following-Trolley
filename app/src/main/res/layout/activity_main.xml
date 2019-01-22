@@ -12,31 +12,32 @@
         android:layout_width="194dp"
         android:layout_height="31dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="28dp"
+        android:layout_marginTop="280dp"
         android:layout_marginEnd="8dp"
         android:text="Controller"
         android:textAlignment="center"
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.427"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!--<io.github.controlwear.virtual.joystick.android.JoystickView xmlns:custom="http://schemas.android.com/apk/res-auto"-->
-        <!--android:id="@+id/joystick"-->
-        <!--android:layout_width="231dp"-->
-        <!--android:layout_height="230dp"-->
-        <!--android:layout_marginBottom="8dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--custom:JV_backgroundColor="#009688"-->
-        <!--custom:JV_borderColor="#00796B"-->
-        <!--custom:JV_borderWidth="4dp"-->
-        <!--custom:JV_buttonColor="#FF6E40"-->
-        <!--custom:JV_buttonSizeRatio="15%"-->
-        <!--custom:JV_fixedCenter="false"-->
-        <!--custom:layout_constraintBottom_toBottomOf="parent"-->
-        <!--custom:layout_constraintEnd_toEndOf="parent"-->
-        <!--custom:layout_constraintStart_toStartOf="parent" />-->
+    <!--android:id="@+id/joystick"-->
+    <!--android:layout_width="231dp"-->
+    <!--android:layout_height="230dp"-->
+    <!--android:layout_marginBottom="8dp"-->
+    <!--android:layout_marginEnd="8dp"-->
+    <!--android:layout_marginStart="8dp"-->
+    <!--custom:JV_backgroundColor="#009688"-->
+    <!--custom:JV_borderColor="#00796B"-->
+    <!--custom:JV_borderWidth="4dp"-->
+    <!--custom:JV_buttonColor="#FF6E40"-->
+    <!--custom:JV_buttonSizeRatio="15%"-->
+    <!--custom:JV_fixedCenter="false"-->
+    <!--custom:layout_constraintBottom_toBottomOf="parent"-->
+    <!--custom:layout_constraintEnd_toEndOf="parent"-->
+    <!--custom:layout_constraintStart_toStartOf="parent" />-->
 
     <TextView
         android:id="@+id/tvDirection"
@@ -50,26 +51,26 @@
         android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
+        app:layout_constraintHorizontal_bias="0.475"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvController"
-        app:layout_constraintVertical_bias="0.15" />
+        app:layout_constraintVertical_bias="0.368" />
 
     <!--<Button-->
-        <!--android:id="@+id/btnForward"-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginTop="8dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:layout_marginBottom="8dp"-->
-        <!--android:text="Forward"-->
-        <!--app:layout_constraintBottom_toTopOf="@+id/btnBackward"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintHorizontal_bias="0.487"-->
-        <!--app:layout_constraintStart_toStartOf="parent"-->
-        <!--app:layout_constraintTop_toBottomOf="@+id/tvDirection"-->
-        <!--app:layout_constraintVertical_bias="0.247" />-->
+    <!--android:id="@+id/btnForward"-->
+    <!--android:layout_width="wrap_content"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:layout_marginStart="8dp"-->
+    <!--android:layout_marginTop="8dp"-->
+    <!--android:layout_marginEnd="8dp"-->
+    <!--android:layout_marginBottom="8dp"-->
+    <!--android:text="Forward"-->
+    <!--app:layout_constraintBottom_toTopOf="@+id/btnBackward"-->
+    <!--app:layout_constraintEnd_toEndOf="parent"-->
+    <!--app:layout_constraintHorizontal_bias="0.487"-->
+    <!--app:layout_constraintStart_toStartOf="parent"-->
+    <!--app:layout_constraintTop_toBottomOf="@+id/tvDirection"-->
+    <!--app:layout_constraintVertical_bias="0.247" />-->
 
     <Button
         android:id="@+id/btnRight"
@@ -82,9 +83,10 @@
         android:text="Turn Right"
         app:layout_constraintBottom_toTopOf="@+id/tvCurrDegree"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.672"
+        app:layout_constraintHorizontal_bias="0.71"
         app:layout_constraintStart_toEndOf="@+id/btnLeft"
-        app:layout_constraintTop_toBottomOf="@+id/btnStop" />
+        app:layout_constraintTop_toBottomOf="@+id/btnStop"
+        app:layout_constraintVertical_bias="0.447" />
 
     <Button
         android:id="@+id/btnLeft"
@@ -102,8 +104,8 @@
         android:id="@+id/btnStart"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="64dp"
-        android:layout_marginTop="180dp"
+        android:layout_marginStart="76dp"
+        android:layout_marginTop="324dp"
         android:text="Start"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -113,11 +115,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="180dp"
+        android:layout_marginTop="324dp"
         android:layout_marginEnd="64dp"
         android:text="Stop"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.648"
+        app:layout_constraintHorizontal_bias="0.616"
         app:layout_constraintStart_toEndOf="@+id/btnStart"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -142,62 +144,78 @@
         app:layout_constraintStart_toStartOf="@+id/btnRight" />
 
     <!--<Button-->
-        <!--android:id="@+id/btnBackward"-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:layout_marginBottom="52dp"-->
-        <!--android:text="Backward"-->
-        <!--app:layout_constraintBottom_toBottomOf="parent"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintHorizontal_bias="0.492"-->
-        <!--app:layout_constraintStart_toStartOf="parent" />-->
+    <!--android:id="@+id/btnBackward"-->
+    <!--android:layout_width="wrap_content"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:layout_marginStart="8dp"-->
+    <!--android:layout_marginEnd="8dp"-->
+    <!--android:layout_marginBottom="52dp"-->
+    <!--android:text="Backward"-->
+    <!--app:layout_constraintBottom_toBottomOf="parent"-->
+    <!--app:layout_constraintEnd_toEndOf="parent"-->
+    <!--app:layout_constraintHorizontal_bias="0.492"-->
+    <!--app:layout_constraintStart_toStartOf="parent" />-->
 
     <!--<EditText-->
-        <!--android:id="@+id/setSpd"-->
-        <!--android:layout_width="102dp"-->
-        <!--android:layout_height="43dp"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginTop="8dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:layout_marginBottom="8dp"-->
-        <!--android:ems="10"-->
-        <!--android:hint="Speed Left"-->
-        <!--android:inputType="number"-->
-        <!--app:layout_constraintBottom_toBottomOf="parent"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintHorizontal_bias="0.111"-->
-        <!--app:layout_constraintStart_toStartOf="parent"-->
-        <!--app:layout_constraintTop_toBottomOf="@+id/tvController"-->
-        <!--app:layout_constraintVertical_bias="0.038" />-->
+    <!--android:id="@+id/setSpd"-->
+    <!--android:layout_width="102dp"-->
+    <!--android:layout_height="43dp"-->
+    <!--android:layout_marginStart="8dp"-->
+    <!--android:layout_marginTop="8dp"-->
+    <!--android:layout_marginEnd="8dp"-->
+    <!--android:layout_marginBottom="8dp"-->
+    <!--android:ems="10"-->
+    <!--android:hint="Speed Left"-->
+    <!--android:inputType="number"-->
+    <!--app:layout_constraintBottom_toBottomOf="parent"-->
+    <!--app:layout_constraintEnd_toEndOf="parent"-->
+    <!--app:layout_constraintHorizontal_bias="0.111"-->
+    <!--app:layout_constraintStart_toStartOf="parent"-->
+    <!--app:layout_constraintTop_toBottomOf="@+id/tvController"-->
+    <!--app:layout_constraintVertical_bias="0.038" />-->
 
     <!--<EditText-->
-        <!--android:id="@+id/setSpd2"-->
-        <!--android:layout_width="124dp"-->
-        <!--android:layout_height="46dp"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginTop="20dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:ems="10"-->
-        <!--android:hint="Speed Right"-->
-        <!--android:inputType="number"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintHorizontal_bias="0.673"-->
-        <!--app:layout_constraintStart_toEndOf="@+id/setSpd"-->
-        <!--app:layout_constraintTop_toBottomOf="@+id/tvController" />-->
+    <!--android:id="@+id/setSpd2"-->
+    <!--android:layout_width="124dp"-->
+    <!--android:layout_height="46dp"-->
+    <!--android:layout_marginStart="8dp"-->
+    <!--android:layout_marginTop="20dp"-->
+    <!--android:layout_marginEnd="8dp"-->
+    <!--android:ems="10"-->
+    <!--android:hint="Speed Right"-->
+    <!--android:inputType="number"-->
+    <!--app:layout_constraintEnd_toEndOf="parent"-->
+    <!--app:layout_constraintHorizontal_bias="0.673"-->
+    <!--app:layout_constraintStart_toEndOf="@+id/setSpd"-->
+    <!--app:layout_constraintTop_toBottomOf="@+id/tvController" />-->
 
     <!--<Button-->
-        <!--android:id="@+id/btnSetSpeed"-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_marginStart="8dp"-->
-        <!--android:layout_marginTop="12dp"-->
-        <!--android:layout_marginEnd="8dp"-->
-        <!--android:text="Set Speed"-->
-        <!--app:layout_constraintEnd_toEndOf="parent"-->
-        <!--app:layout_constraintHorizontal_bias="0.483"-->
-        <!--app:layout_constraintStart_toStartOf="parent"-->
-        <!--app:layout_constraintTop_toBottomOf="@+id/setSpd" />-->
+    <!--android:id="@+id/btnSetSpeed"-->
+    <!--android:layout_width="wrap_content"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:layout_marginStart="8dp"-->
+    <!--android:layout_marginTop="12dp"-->
+    <!--android:layout_marginEnd="8dp"-->
+    <!--android:text="Set Speed"-->
+    <!--app:layout_constraintEnd_toEndOf="parent"-->
+    <!--app:layout_constraintHorizontal_bias="0.483"-->
+    <!--app:layout_constraintStart_toStartOf="parent"-->
+    <!--app:layout_constraintTop_toBottomOf="@+id/setSpd" />-->
+
+    <RelativeLayout
+        android:id="@+id/relative_scan_take_single"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_marginStart="94dp"
+        android:layout_marginTop="54dp"
+        android:layout_marginEnd="117dp"
+        android:layout_marginBottom="477dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+
+    </RelativeLayout>
 
 </android.support.constraint.ConstraintLayout>

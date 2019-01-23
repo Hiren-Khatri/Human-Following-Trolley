@@ -1,6 +1,8 @@
 package com.example.alexander.helloioio;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -8,6 +10,8 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -78,6 +82,13 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     private ZXingScannerView qrView;
 
+    private static final int REQUEST_LOCATION_PERMISSION = 1;
+    private static final int REQUEST_CAMERA_PERMISSION = 1;
+
+    private String resultHolder;
+
+    private CompassCoded compassCoded;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -105,53 +116,20 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         database = FirebaseDatabase.getInstance();
-        Log.v ("DEEEEBUG", String.valueOf(database));
         myRef = database.getReference("heading");
         refForward = database.getReference("forward");
         refIdle = database.getReference("idle");
         refLeft = database.getReference("turnLeft");
         refRight = database.getReference("turnRight");
 
-        //tambahin check untuk cek camera permission
+        compassCoded = new CompassCoded();
 
-//
-//        private void init() {
-//
-//            //Scanner
-//            qrView = new ZXingScannerView(this);
-//            RelativeLayout rl = (RelativeLayout) findViewById(R.id.relative_scan_take_single);
-//            rl.addView(qrView);
-//            qrView.setResultHandler(this);
-//            qrView.startCamera();
-//            qrView.setSoundEffectsEnabled(true);
-//            qrView.setAutoFocus(true);
-//
-//        }
-//
-//        @Override
-//        public void onResume() {
-//            super.onResume();
-//            qrView.setResultHandler(this); // Register ourselves as a handler for scan results.
-//            qrView.startCamera();          // Start camera on resume
-//        }
-//
-//        @Override
-//        public void onPause() {
-//            super.onPause();
-//            qrView.stopCamera();           // Stop camera on pause
-//        }
-//
-//
-//===================================================================================================================
-//
-//<RelativeLayout
-//        android:id="@+id/relative_scan_take_single"
-//        android:layout_width="200dp"
-//        android:layout_height="200dp"
-//        android:layout_marginBottom="120dp">
-//
-//
-//        </RelativeLayout>
+        if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        }
+
         btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -325,7 +303,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        degree = Math.round(event.values[0]);
+        degree = Math.round(event.values[0]);//yang ini ngasih valuenya jelek, kadang nilainya rusak
         tvDegree.setText("Degree = " + String.valueOf(degree));
 
         if(degree != prevDegree) {
@@ -363,17 +341,26 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         super.onResume();
         mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
                 SensorManager.SENSOR_DELAY_GAME);
+        qrView.setResultHandler(this);
+        qrView.startCamera();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(this);
+        qrView.stopCamera();
     }
 
     @Override
     public void handleResult(Result result) {
-
+        toast(result.getText());
+        resultHolder = result.getText();
+        switch(resultHolder){
+            case "FORWARD": autoForward();
+            case "TURNLEFT": turningLeft();
+            case "TURNRIGHT" : turningRight();
+        }//masih nggak bisa, scan jalan tapi nggak keluar toast atau ngejalanin forward, turnleft, atau turnright
     }
 
     class Looper extends BaseIOIOLooper {
@@ -454,19 +441,16 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                     }
                 });
 
-                if(degree >=90){
+                if(degree >=90&&degree<=360){
                     currDegree = degree - 90;
                 }
-                else {
+                else if (degree<90){
                     currDegree = degree + 270;
                 }
 
+
                 while(currDegree!=degree) {
                     if (degree == currDegree) {
-//                        turnLeft=false;
-//                        turnRight=false;//ada chance di sini ada false positive
-                        //dimana setelah ini dijadiin false, pertama kali akan jalan maju
-                        //tapi di percobaan kedua, langsung berhenti dan nggak mau terima input buat maju
                         autoForward();
                         break;
                     }
@@ -491,7 +475,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 if(degree >=270){
                     currDegree = degree - 270;
                 }
-                else {
+                else if (degree<270&&degree>=0){
                     currDegree = degree + 90;
 
                 }

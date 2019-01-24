@@ -89,6 +89,12 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     private CompassCoded compassCoded;
 
+    private float[] mGData = new float[3];
+    private float[] mMData = new float[3];
+    private float[] mR = new float[16];
+    private float[] mI = new float[16];
+    private float[] mOrientation = new float[3];
+    private int mCount;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -303,32 +309,51 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        degree = Math.round(event.values[0]);//yang ini ngasih valuenya jelek, kadang nilainya rusak
-        tvDegree.setText("Degree = " + String.valueOf(degree));
-
-        if(degree != prevDegree) {
-
-            myRef.setValue(degree);
-
-            myRef.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
-                    // This method is called once with the initial value and again
-                    // whenever data at this location is updated.
-                    Double value = dataSnapshot.getValue(Double.class);
-                    Log.d(TAG, "Value is: " + value);
-                }
-
-                @Override
-                public void onCancelled(DatabaseError error) {
-                    // Failed to read value
-                    Log.w(TAG, "Failed to read value.", error.toException());
-                }
-            });
+        int type = event.sensor.getType();
+        float[] data;
+        if (type == Sensor.TYPE_ACCELEROMETER) {
+            data = mGData;
+        } else if (type == Sensor.TYPE_MAGNETIC_FIELD) {
+            data = mMData;
+        } else {
+            // we should not be here.
+            return;
         }
-        prevDegree = degree;
+        for (int i=0 ; i<3 ; i++)
+            data[i] = event.values[i];
+        SensorManager.getRotationMatrix(mR, mI, mGData, mMData);
+        SensorManager.getOrientation(mR, mOrientation);
+        float incl = SensorManager.getInclination(mI);
+        if (mCount++ > 50) {
+            final float rad2deg = (float)(180.0f/Math.PI);
+            mCount = 0;
+            Log.d("Compass", "yaw: " + (int)(mOrientation[0]*rad2deg) +
+                    "  pitch: " + (int)(mOrientation[1]*rad2deg) +
+                    "  roll: " + (int)(mOrientation[2]*rad2deg) +
+                    "  incl: " + (int)(incl*rad2deg)
+            );
+            tvDegree.setText("Degree = " + String.valueOf(mOrientation[0]*rad2deg+180f));
+            degree = mOrientation[0]*rad2deg+180f;
+            if(degree!=prevDegree){
+                myRef.setValue(mOrientation[0]*rad2deg+180f);
+                myRef.addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        Double value = dataSnapshot.getValue(Double.class);
+                        Log.d(TAG, "Value is: " + value);
+                    }
 
-        currentDegree = -degree;
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        Log.w(TAG, "Failed to read value.", databaseError.toException());
+                    }
+                });
+            }
+
+            prevDegree = degree;
+
+            currentDegree = -degree;
+        }
     }
 
     @Override
@@ -343,6 +368,10 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 SensorManager.SENSOR_DELAY_GAME);
         qrView.setResultHandler(this);
         qrView.startCamera();
+        Sensor gsensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        Sensor msensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        mSensorManager.registerListener(this, gsensor, SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(this, msensor, SensorManager.SENSOR_DELAY_GAME);
     }
 
     @Override
@@ -360,7 +389,10 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             case "FORWARD": autoForward();
             case "TURNLEFT": turningLeft();
             case "TURNRIGHT" : turningRight();
-        }//masih nggak bisa, scan jalan tapi nggak keluar toast atau ngejalanin forward, turnleft, atau turnright
+        }
+        qrView.resumeCameraPreview(this);//ini bisa buat lanjutin scanningnya. jadi setelah scan,
+        //preview scannernya jalan lagi
+        //coba tes apa ini bisa untuk send request ke firebasenya
     }
 
     class Looper extends BaseIOIOLooper {

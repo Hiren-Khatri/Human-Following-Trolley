@@ -1,1 +1,1 @@
-include ':app', ':joysticklibrary'
+include ':app', ':joysticklibrary', ':navisenslocationprovider'

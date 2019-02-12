@@ -31,9 +31,6 @@
                 android:resource="@xml/device_filter" />
 
         </activity>
-        <activity android:name=".CompassCoded"
-            android:screenOrientation="portrait">
-        </activity>
     </application>
 
 </manifest>

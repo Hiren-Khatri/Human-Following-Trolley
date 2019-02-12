@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/MobileRobot2018.iml" filepath="$PROJECT_DIR$/MobileRobot2018.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/joysticklibrary/joysticklibrary.iml" filepath="$PROJECT_DIR$/joysticklibrary/joysticklibrary.iml" />
+      <module fileurl="file://$PROJECT_DIR$/navisenslocationprovider/navisenslocationprovider.iml" filepath="$PROJECT_DIR$/navisenslocationprovider/navisenslocationprovider.iml" />
     </modules>
   </component>
 </project>

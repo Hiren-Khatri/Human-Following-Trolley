@@ -2,13 +2,13 @@ package com.example.alexander.helloioio;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -26,6 +26,12 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.zxing.Result;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
+import io.indoorlocation.core.IndoorLocationProvider;
+import io.indoorlocation.manual.ManualIndoorLocationProvider;
+import io.indoorlocation.navisens.NavisensIndoorLocationProvider;
 import ioio.lib.api.DigitalOutput;
 import ioio.lib.api.IOIO;
 import ioio.lib.api.IOIO.VersionType;
@@ -36,7 +42,6 @@ import ioio.lib.util.IOIOLooper;
 import ioio.lib.util.android.IOIOActivity;
 import me.dm7.barcodescanner.zxing.ZXingScannerView;
 
-import static android.content.ContentValues.TAG;
 import static java.lang.Math.abs;
 
 public class  MainActivity extends IOIOActivity implements SensorEventListener, ZXingScannerView.ResultHandler {
@@ -71,10 +76,12 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     private FirebaseDatabase database;
     private DatabaseReference myRef;
-    private DatabaseReference refForward, refLeft, refRight, refIdle;
+    private DatabaseReference refForward, refLeft, refRight, refIdle, trolleyLat1, trolleyLon1, trolleyLat2, trolleyLon2;
     private float degree;
 
     private float currDegree = 0f;
+
+    private float tempDegree = 0f;
     private Boolean turnRight = false;
     private Boolean turnLeft = false;
 
@@ -87,14 +94,19 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     private String resultHolder;
 
-    private CompassCoded compassCoded;
-
     private float[] mGData = new float[3];
     private float[] mMData = new float[3];
     private float[] mR = new float[16];
     private float[] mI = new float[16];
     private float[] mOrientation = new float[3];
     private int mCount;
+
+    private IndoorLocationProvider manualIndoorLocationProvider;
+    private NavisensIndoorLocationProvider navisensIndoorLocationProvider;
+
+    private String NAVISENS_API_KEY = "jAKCbUXq0tW1slgWfkFZwzCsrAPGe2Kyq1LZDz60RNclFGCLO4AKphJVkdk0lL3o";
+
+    private boolean is1stTrolley = false, is2ndTrolley = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -127,8 +139,11 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         refIdle = database.getReference("idle");
         refLeft = database.getReference("turnLeft");
         refRight = database.getReference("turnRight");
-
-        compassCoded = new CompassCoded();
+        trolleyLat1 = database.getReference().child("troli1").child("currentLat");
+        trolleyLon1 = database.getReference().child("troli1").child("currentLon");
+        trolleyLat2 = database.getReference().child("troli2").child("currentLon");
+        trolleyLon2 = database.getReference().child("troli2").child("currentLon");
+        is1stTrolley = true;
 
         if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -164,7 +179,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 tvDirection.setText(strDirection());
                 isStarted = false;
             }
-        });//kira kira ini dah bisa jalan dengan start (auto-forward) dan berhenti dengan stop (auto-idle)
+        });
 
         leftBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -191,8 +206,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
             @Override
             public void onCancelled(DatabaseError error) {
-                // Failed to read value
-                Log.w("DEEEEBUG", "Failed to read value.", error.toException());
             }
         });
         refLeft.addValueEventListener(new ValueEventListener() {
@@ -238,8 +251,28 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
             }
         });
+        
         init();
+        requestLocationPermission();
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                sendLocToDB();
+            }
+        }, 0, 1000);
+    }
 
+    private void sendLocToDB(){
+        if(navisensIndoorLocationProvider.isStarted()&&navisensIndoorLocationProvider.latitude!=0.0){
+            if(is1stTrolley==true&&is2ndTrolley==false){
+                trolleyLat1.setValue(navisensIndoorLocationProvider.latitude);
+                trolleyLon1.setValue(navisensIndoorLocationProvider.longitude);
+            }
+            else if(is2ndTrolley==true&&is1stTrolley==false){
+                trolleyLat2.setValue(navisensIndoorLocationProvider.latitude);
+                trolleyLon2.setValue(navisensIndoorLocationProvider.longitude);
+            }
+        }
     }
     private void init() {
         //Scanner
@@ -339,13 +372,10 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 myRef.addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                        Double value = dataSnapshot.getValue(Double.class);
-                        Log.d(TAG, "Value is: " + value);
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError databaseError) {
-                        Log.w(TAG, "Failed to read value.", databaseError.toException());
                     }
                 });
             }
@@ -381,18 +411,39 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         qrView.stopCamera();
     }
 
+    boolean isDouble(String str) {
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     @Override
     public void handleResult(Result result) {
-        toast(result.getText());
         resultHolder = result.getText();
-        switch(resultHolder){
-            case "FORWARD": autoForward();
-            case "TURNLEFT": turningLeft();
-            case "TURNRIGHT" : turningRight();
+        if(resultHolder!="FORWARD"&&resultHolder!="TURNLEFT"&&resultHolder!="TURNRIGHT") {
+            String[] rawLatQR = resultHolder.split(",");
+            Double latQR = Double.parseDouble(rawLatQR[0]);
+            Double lonQR = Double.parseDouble(rawLatQR[1]);
+            navisensIndoorLocationProvider.setLocFromQR(latQR, lonQR);
         }
-        qrView.resumeCameraPreview(this);//ini bisa buat lanjutin scanningnya. jadi setelah scan,
-        //preview scannernya jalan lagi
-        //coba tes apa ini bisa untuk send request ke firebasenya
+        else if(resultHolder=="FORWARD"||resultHolder=="TURNLEFT"||resultHolder=="TURNRIGHT") {
+                if (resultHolder.equals("FORWARD")) {
+                    idle();
+                    autoForward();
+                } else if (resultHolder.equals("TURNLEFT")) {
+                    idle();
+                    turningLeft();
+                } else if (resultHolder.equals("TURNRIGHT")) {
+                    idle();
+                    turningRight();
+                } else {
+                    idle();
+                }
+        }
+        qrView.resumeCameraPreview(this);
     }
 
     class Looper extends BaseIOIOLooper {
@@ -403,6 +454,8 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
         private DigitalOutput FrontLeft_1;
         private PwmOutput FrontLeftPWM;
+
+        private DigitalOutput ConnectedLED;
 
         private float realSpeed = 50;
 
@@ -420,6 +473,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             FrontRightPWM.setDutyCycle(0);
             FrontLeftPWM.setDutyCycle(0);
 
+            ConnectedLED = ioio_.openDigitalOutput(8, true);
         }
 
 
@@ -466,6 +520,8 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 FrontLeft(SPEED);//SPEED=0
                 FrontRight(SPEED2);//SPEED2=100
                 currDegree = degree;
+                Boolean x = false;
+                Boolean y = false;
                 tvDirection.post(new Runnable() {
                     @Override
                     public void run() {
@@ -473,18 +529,30 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                     }
                 });
 
-                if(degree >=90&&degree<=360){
-                    currDegree = degree - 90;
+                if(degree >=90){
+                    currDegree = degree - 90f;
+                    x=true;
+                    y=false;
                 }
                 else if (degree<90){
-                    currDegree = degree + 270;
+                    currDegree = degree + 270f;
+                    x=false;
+                    y=true;
                 }
 
 
                 while(currDegree!=degree) {
-                    if (degree == currDegree) {
-                        autoForward();
-                        break;
+                    if(x){
+                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+                            autoForward();
+                            break;
+                        }
+                    }
+                    if(y){
+                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+                            autoForward();
+                            break;
+                        }
                     }
                     else if(IDLE){
                         break;
@@ -498,6 +566,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
                 FrontRight(SPEED2);//SPEED2=0
                 currDegree = degree;
+                Boolean x=false, y=false;
                 tvDirection.post(new Runnable() {
                     @Override
                     public void run() {
@@ -505,19 +574,28 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                     }
                 });
                 if(degree >=270){
-                    currDegree = degree - 270;
+                    currDegree = degree - 270f;
+                    x=true;
+                    y=false;
                 }
-                else if (degree<270&&degree>=0){
-                    currDegree = degree + 90;
-
+                else if (degree<270){
+                    currDegree = degree + 90f;
+                    x=false;
+                    y=true;
                 }
 
                 while(currDegree!=degree) {
-                    if (degree == currDegree) {
-//                        turnLeft=false;
-//                        turnRight=false;
-                        autoForward();
-                        break;
+                    if(x){
+                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+                            autoForward();
+                            break;
+                        }
+                    }
+                    if(y){
+                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+                            autoForward();
+                            break;
+                        }
                     }
                     else if(IDLE){
                         break;
@@ -533,8 +611,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             }
 
             else{
-//                FrontRight(0);
-//                FrontLeft(0);
                 autoForward();
             }
             Thread.sleep(50);
@@ -569,10 +645,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 FrontLeft_1.write(false);
             }
         }
-
-
-
-
         /**
          * Called when the IOIO is disconnected.
          *
@@ -619,5 +691,47 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void setupLocationProvider() {
+        manualIndoorLocationProvider = new ManualIndoorLocationProvider();
+        navisensIndoorLocationProvider = new NavisensIndoorLocationProvider(getApplicationContext(),
+                NAVISENS_API_KEY, manualIndoorLocationProvider);
+        navisensIndoorLocationProvider.start();
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_LOCATION_PERMISSION: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    setupLocationProvider();
+                }
+            }
+        }
+    }
+
+    private void requestLocationPermission() {
+        if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        } else {
+            setupLocationProvider();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(data!=null) {
+            if(!data.getStringExtra("url").equals("Troli2")&&!data.getStringExtra("url").equals("Troli1")) {
+                String[] rawLatQR = data.getStringExtra("url").split(",");
+                Double latQR = Double.parseDouble(rawLatQR[0]);
+                Double lonQR = Double.parseDouble(rawLatQR[1]);
+                navisensIndoorLocationProvider.setLocFromQR(latQR, lonQR);
+            }
+        }
     }
 }

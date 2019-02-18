@@ -77,6 +77,9 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
     private FirebaseDatabase database;
     private DatabaseReference myRef;
     private DatabaseReference refForward, refLeft, refRight, refIdle, trolleyLat1, trolleyLon1, trolleyLat2, trolleyLon2;
+    private DatabaseReference trolley1User, trolley2User;
+    private DatabaseReference trolley1Heading, trolley2Heading;
+    private DatabaseReference trolleyID1, trolleyID2;
     private float degree;
 
     private float currDegree = 0f;
@@ -93,6 +96,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
 
     private String resultHolder;
+    private String connectedTo;
 
     private float[] mGData = new float[3];
     private float[] mMData = new float[3];
@@ -135,6 +139,8 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
         database = FirebaseDatabase.getInstance();
         myRef = database.getReference("heading");
+        trolley1Heading = database.getReference().child("troli1").child("heading");
+        trolley2Heading = database.getReference().child("troli2").child("heading");
         refForward = database.getReference("forward");
         refIdle = database.getReference("idle");
         refLeft = database.getReference("turnLeft");
@@ -143,7 +149,10 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         trolleyLon1 = database.getReference().child("troli1").child("currentLon");
         trolleyLat2 = database.getReference().child("troli2").child("currentLon");
         trolleyLon2 = database.getReference().child("troli2").child("currentLon");
-        is1stTrolley = true;
+        trolley1User = database.getReference().child("troli1").child("connectedTo");
+        trolley2User = database.getReference().child("troli2").child("connectedTo");
+        trolleyID1 = database.getReference().child("troli1").child("trolleyID");
+        trolleyID2 = database.getReference().child("troli2").child("trolleyID");
 
         if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -165,7 +174,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 isStarted = true;
             }
         });
-
         btnStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -180,14 +188,12 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 isStarted = false;
             }
         });
-
         leftBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 turningLeft();
             }
         });
-
         rightBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -254,25 +260,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         
         init();
         requestLocationPermission();
-        new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                sendLocToDB();
-            }
-        }, 0, 1000);
-    }
-
-    private void sendLocToDB(){
-        if(navisensIndoorLocationProvider.isStarted()&&navisensIndoorLocationProvider.latitude!=0.0){
-            if(is1stTrolley==true&&is2ndTrolley==false){
-                trolleyLat1.setValue(navisensIndoorLocationProvider.latitude);
-                trolleyLon1.setValue(navisensIndoorLocationProvider.longitude);
-            }
-            else if(is2ndTrolley==true&&is1stTrolley==false){
-                trolleyLat2.setValue(navisensIndoorLocationProvider.latitude);
-                trolleyLon2.setValue(navisensIndoorLocationProvider.longitude);
-            }
-        }
     }
     private void init() {
         //Scanner
@@ -283,6 +270,14 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         qrView.startCamera();
         qrView.setSoundEffectsEnabled(true);
         qrView.setAutoFocus(true);
+    }
+    private void updateID(){
+        if(is1stTrolley){
+            trolleyID1.setValue(navisensIndoorLocationProvider.userID);
+        }
+        else if(is2ndTrolley){
+            trolleyID1.setValue(navisensIndoorLocationProvider.userID);
+        }
     }
 
     public void turningLeft(){
@@ -367,21 +362,15 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             );
             tvDegree.setText("Degree = " + String.valueOf(mOrientation[0]*rad2deg+180f));
             degree = mOrientation[0]*rad2deg+180f;
-            if(degree!=prevDegree){
-                myRef.setValue(mOrientation[0]*rad2deg+180f);
-                myRef.addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError databaseError) {
-                    }
-                });
+//            if(is1stTrolley==true&&is2ndTrolley==false) {
+            if(is1stTrolley) {//heading masih nggak bisa update dengan benar
+                trolley1Heading.setValue(degree);
             }
-
+//            else if(is2ndTrolley==true&&is2ndTrolley==false){
+            else if(is2ndTrolley){
+                trolley2Heading.setValue(degree);
+            }
             prevDegree = degree;
-
             currentDegree = -degree;
         }
     }
@@ -409,15 +398,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         super.onPause();
         mSensorManager.unregisterListener(this);
         qrView.stopCamera();
-    }
-
-    boolean isDouble(String str) {
-        try {
-            Double.parseDouble(str);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
     }
 
     @Override
@@ -463,6 +443,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         @Override
         protected void setup() throws ConnectionLostException, InterruptedException {
             showVersions(ioio_, "IOIO connected!");
+
             led_ = ioio_.openDigitalOutput(0, true);
             FrontLeft_1 = ioio_.openDigitalOutput(6);
             FrontLeftPWM = ioio_.openPwmOutput(5, 100);
@@ -473,8 +454,12 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             FrontRightPWM.setDutyCycle(0);
             FrontLeftPWM.setDutyCycle(0);
 
+            //Tahan sebelum ada user yang connect
+            while(connectedTo.equals("")) idle();
+            //led_.write(false);
+
             ConnectedLED = ioio_.openDigitalOutput(8, true);
-        }
+        }//Tahan sebelum ada user yang connect
 
 
 
@@ -698,7 +683,51 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         navisensIndoorLocationProvider = new NavisensIndoorLocationProvider(getApplicationContext(),
                 NAVISENS_API_KEY, manualIndoorLocationProvider);
         navisensIndoorLocationProvider.start();
+        trolley1User.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                String val = dataSnapshot.getValue(String.class);
+                connectedTo = val;
+                if(navisensIndoorLocationProvider.userID!=null) {
+                    if (connectedTo.equals("")) {
+                        is1stTrolley = false;
+                    } else if (navisensIndoorLocationProvider.userID.equals(val)) {
+                        is1stTrolley = true;
+                        updateID();
+                        navisensIndoorLocationProvider.startingUDP(1);
+                        if (is2ndTrolley == true) is2ndTrolley = false;
+                    }
+                }
 
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+        trolley2User.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                String val = dataSnapshot.getValue(String.class);
+                connectedTo = val;
+                if(navisensIndoorLocationProvider.userID!=null) {
+                    if (connectedTo.equals("")) {
+                        is2ndTrolley = false;
+                    } else if (navisensIndoorLocationProvider.userID.equals(val)) {
+                        is2ndTrolley = true;
+                        updateID();
+                        navisensIndoorLocationProvider.startingUDP(2);
+                        if (is1stTrolley == true) is1stTrolley = false;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
     }
 
     @Override
@@ -734,4 +763,16 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             }
         }
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(is1stTrolley){
+            trolleyID1.setValue("");
+        }
+        else if(is2ndTrolley){
+            trolleyID2.setValue("");
+        }
+    }
+
 }

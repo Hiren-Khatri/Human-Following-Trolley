@@ -66,6 +66,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
     private TextView tvDegree;
     private TextView tvCurrDegree;
+    private TextView tvPitch, tvYaw;
 
     private boolean isStarted = false;
 
@@ -80,6 +81,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
     private DatabaseReference trolley1User, trolley2User;
     private DatabaseReference trolley1Heading, trolley2Heading;
     private DatabaseReference trolleyID1, trolleyID2;
+    private DatabaseReference dbPitch, dbYaw;
     private float degree;
 
     private float currDegree = 0f;
@@ -131,6 +133,8 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
 
         tvDegree = findViewById(R.id.tvDegree);
         tvCurrDegree = findViewById(R.id.tvCurrDegree);
+        tvPitch = findViewById(R.id.tvPitch);
+        tvYaw = findViewById(R.id.tvYaw);
 
         tvDirection = (TextView) findViewById(R.id.tvDirection);
         tvDirection.setText(DIRECTION);
@@ -153,6 +157,8 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         trolley2User = database.getReference().child("troli2").child("connectedTo");
         trolleyID1 = database.getReference().child("troli1").child("trolleyID");
         trolleyID2 = database.getReference().child("troli2").child("trolleyID");
+        dbPitch = database.getReference().child("troli1").child("pitch");
+        dbYaw = database.getReference().child("troli1").child("yaw");
 
         if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -273,10 +279,10 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
     }
     private void updateID(){
         if(is1stTrolley){
-            trolleyID1.setValue(navisensIndoorLocationProvider.userID);
+            trolleyID1.setValue(navisensIndoorLocationProvider.getDeviceID());
         }
         else if(is2ndTrolley){
-            trolleyID1.setValue(navisensIndoorLocationProvider.userID);
+            trolleyID2.setValue(navisensIndoorLocationProvider.getDeviceID());
         }
     }
 
@@ -361,6 +367,11 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                     "  incl: " + (int)(incl*rad2deg)
             );
             tvDegree.setText("Degree = " + String.valueOf(mOrientation[0]*rad2deg+180f));
+            tvPitch.setText("Pitch = "+ String.valueOf(mOrientation[1]*rad2deg));
+            tvYaw.setText("Yaw = "+String.valueOf(mOrientation[2]*rad2deg+180f));
+            dbPitch.setValue(mOrientation[1]*rad2deg);
+            dbYaw.setValue(mOrientation[2]*rad2deg+180f);
+            trolley1Heading.setValue(degree);
             degree = mOrientation[0]*rad2deg+180f;
 //            if(is1stTrolley==true&&is2ndTrolley==false) {
             if(is1stTrolley) {//heading masih nggak bisa update dengan benar
@@ -409,20 +420,19 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             Double lonQR = Double.parseDouble(rawLatQR[1]);
             navisensIndoorLocationProvider.setLocFromQR(latQR, lonQR);
         }
-        else if(resultHolder=="FORWARD"||resultHolder=="TURNLEFT"||resultHolder=="TURNRIGHT") {
-                if (resultHolder.equals("FORWARD")) {
-                    idle();
-                    autoForward();
-                } else if (resultHolder.equals("TURNLEFT")) {
-                    idle();
-                    turningLeft();
-                } else if (resultHolder.equals("TURNRIGHT")) {
-                    idle();
-                    turningRight();
-                } else {
-                    idle();
-                }
+        else if (resultHolder.equals("FORWARD")) {
+            idle();
+            autoForward();
+        } else if (resultHolder.equals("TURNLEFT")) {
+            idle();
+            turningLeft();
+        } else if (resultHolder.equals("TURNRIGHT")) {
+            idle();
+            turningRight();
+        } else {
+            idle();
         }
+
         qrView.resumeCameraPreview(this);
     }
 
@@ -461,8 +471,6 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             ConnectedLED = ioio_.openDigitalOutput(8, true);
         }//Tahan sebelum ada user yang connect
 
-
-
         @Override
         public void loop() throws ConnectionLostException, InterruptedException {
             if(refForward.toString().equals("false")&&refLeft.toString().equals("false")&&refRight.toString().equals("false")){
@@ -500,92 +508,96 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             }
 
             else if(turnLeft){
-                SPEED=0;
-                SPEED2=100;
-                FrontLeft(SPEED);//SPEED=0
-                FrontRight(SPEED2);//SPEED2=100
-                currDegree = degree;
-                Boolean x = false;
-                Boolean y = false;
-                tvDirection.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        tvDirection.setText(strDirection());
-                    }
-                });
-
-                if(degree >=90){
-                    currDegree = degree - 90f;
-                    x=true;
-                    y=false;
-                }
-                else if (degree<90){
-                    currDegree = degree + 270f;
-                    x=false;
-                    y=true;
-                }
-
-
-                while(currDegree!=degree) {
-                    if(x){
-                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-                            autoForward();
-                            break;
-                        }
-                    }
-                    if(y){
-                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-                            autoForward();
-                            break;
-                        }
-                    }
-                    else if(IDLE){
-                        break;
-                    }
-                }
-
+                turn(45);
             }
-            else if(turnRight){
-                SPEED=78;
-                SPEED2=0;
-                FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
-                FrontRight(SPEED2);//SPEED2=0
-                currDegree = degree;
-                Boolean x=false, y=false;
-                tvDirection.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        tvDirection.setText(strDirection());
-                    }
-                });
-                if(degree >=270){
-                    currDegree = degree - 270f;
-                    x=true;
-                    y=false;
-                }
-                else if (degree<270){
-                    currDegree = degree + 90f;
-                    x=false;
-                    y=true;
-                }
-
-                while(currDegree!=degree) {
-                    if(x){
-                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-                            autoForward();
-                            break;
-                        }
-                    }
-                    if(y){
-                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-                            autoForward();
-                            break;
-                        }
-                    }
-                    else if(IDLE){
-                        break;
-                    }
-                }
+            else if(turnRight){//pas pencet turn right di UI, langsung disconnect dan nggak mau terima input apapun lagi
+                turn(45);
+            //======================================================================
+//                private void turn(int angle) throws ConnectionLostException, InterruptedException{
+//                    SPEED=0;
+//                    SPEED2=100;
+//                    FrontLeft(SPEED);//SPEED=0
+//                    FrontRight(SPEED2);//SPEED2=100
+//                    currDegree = degree;
+//                    Boolean x = false;
+//                    Boolean y = false;
+//                    tvDirection.post(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            tvDirection.setText(strDirection());
+//                        }
+//                    });
+//
+//                    if(degree >=90){
+//                        currDegree = degree - 90f;
+//                        x=true;
+//                        y=false;
+//                    }
+//                    else if (degree<90){
+//                        currDegree = degree + 270f;
+//                        x=false;
+//                        y=true;
+//                    }
+//
+//
+//                    while(currDegree!=degree) {
+//                        if(x){
+//                            if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+//                                autoForward();
+//                                break;
+//                            }
+//                        }
+//                        if(y){
+//                            if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+//                                autoForward();
+//                                break;
+//                            }
+//                        }
+//                        else if(IDLE){
+//                            break;
+//                        }
+//                    }
+                //======================================================================
+//                SPEED=78;
+//                SPEED2=0;
+//                FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
+//                FrontRight(SPEED2);//SPEED2=0
+//                currDegree = degree;
+//                Boolean x=false, y=false;
+//                tvDirection.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        tvDirection.setText(strDirection());
+//                    }
+//                });
+//                if(degree >=270){
+//                    currDegree = degree - 270f;
+//                    x=true;
+//                    y=false;
+//                }
+//                else if (degree<270){
+//                    currDegree = degree + 90f;
+//                    x=false;
+//                    y=true;
+//                }
+//
+//                while(currDegree!=degree) {
+//                    if(x){
+//                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+//                            autoForward();
+//                            break;
+//                        }
+//                    }
+//                    if(y){
+//                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+//                            autoForward();
+//                            break;
+//                        }
+//                    }
+//                    else if(IDLE){
+//                        break;
+//                    }
+//                }
             }
 
             else if(IDLE){
@@ -628,6 +640,72 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             else if(speed == 0){
                 FrontLeftPWM.setDutyCycle(0);
                 FrontLeft_1.write(false);
+            }
+        }
+        private void turn(int angle) throws ConnectionLostException, InterruptedException{
+
+            if(turnLeft) {
+                SPEED = 0;
+                SPEED2 = 100;
+            }
+            else if(turnRight) {
+                SPEED = 78;
+                SPEED2 = 0;
+            }
+
+            FrontLeft(SPEED);//SPEED=0
+            FrontRight(SPEED2);//SPEED2=100
+            currDegree = degree;
+            Boolean x = false;
+            Boolean y = false;
+            tvDirection.post(new Runnable() {
+                @Override
+                public void run() {
+                    tvDirection.setText(strDirection());
+                }
+            });
+
+            if(turnLeft){
+                if(degree >=angle){
+                    currDegree = degree - angle;
+                    x=true;
+                    y=false;
+                }
+                else if (degree<angle){
+                    currDegree = degree + (360f-angle);
+                    x=false;
+                    y=true;
+                }
+            } else if(turnRight){
+                if(degree >=(360f-angle)){
+                    currDegree = degree - (360f-angle);
+                    x=true;
+                    y=false;
+                }
+                else if (degree<(360f-angle)){
+                    currDegree = degree + angle;
+                    x=false;
+                    y=true;
+                }
+            }
+
+
+            while(currDegree!=degree) {
+                if(x){
+                    if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+                        autoForward();
+                        break;
+                    }
+                }
+                if(y){
+                    if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
+                        autoForward();
+                        break;
+                    }
+                }
+                else if(IDLE){
+                    break;
+                }
             }
         }
         /**

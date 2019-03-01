@@ -90,7 +90,7 @@
         android:id="@+id/tvDegree"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="68dp"
+        android:layout_marginStart="44dp"
         android:layout_marginTop="8dp"
         android:text="Degree = 0"
         app:layout_constraintStart_toStartOf="parent"
@@ -105,7 +105,7 @@
         android:layout_marginEnd="8dp"
         android:text="CurrDegree = 0"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.25"
+        app:layout_constraintHorizontal_bias="0.6"
         app:layout_constraintStart_toEndOf="@+id/tvDegree"
         app:layout_constraintTop_toBottomOf="@+id/btnRight" />
 
@@ -128,28 +128,35 @@
         android:id="@+id/tvPitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="60dp"
+        android:layout_marginStart="44dp"
         android:layout_marginTop="40dp"
         android:layout_marginBottom="83dp"
         android:text="Pitch = 0"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvDegree"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintVertical_bias="0.256" />
 
     <TextView
         android:id="@+id/tvYaw"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="60dp"
-        android:layout_marginTop="36dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="88dp"
-        android:layout_marginBottom="83dp"
+        android:layout_marginBottom="20dp"
         android:text="Yaw = 0"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toEndOf="@+id/tvPitch"
         app:layout_constraintTop_toBottomOf="@+id/tvCurrDegree"
         app:layout_constraintVertical_bias="1.0" />
+
+    <android.support.design.widget.TextInputLayout
+        android:layout_width="205dp"
+        android:layout_height="wrap_content"
+        tools:layout_editor_absoluteX="107dp"
+        tools:layout_editor_absoluteY="460dp"/>
 
 </android.support.constraint.ConstraintLayout>

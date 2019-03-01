@@ -41,6 +41,7 @@ dependencies {
     implementation 'com.github.IndoorLocation:manual-indoor-location-provider-android:1.0.0'
     implementation group: "com.navisens", name: "motiondnaapi", version: "1.7.3", changing: true
     implementation project(path:':navisenslocationprovider')
+    implementation 'com.android.support:design:27.1.0'
 }
 
 apply plugin: 'com.google.gms.google-services'

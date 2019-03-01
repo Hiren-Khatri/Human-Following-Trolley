@@ -82,6 +82,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
     private DatabaseReference trolley1Heading, trolley2Heading;
     private DatabaseReference trolleyID1, trolleyID2;
     private DatabaseReference dbPitch, dbYaw;
+    private DatabaseReference latUser, lonUser;
     private float degree;
 
     private float currDegree = 0f;
@@ -113,6 +114,9 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
     private String NAVISENS_API_KEY = "jAKCbUXq0tW1slgWfkFZwzCsrAPGe2Kyq1LZDz60RNclFGCLO4AKphJVkdk0lL3o";
 
     private boolean is1stTrolley = false, is2ndTrolley = false;
+    private boolean firstCheck = false;
+
+    private double uLat, uLon, tLat, tLon;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -159,6 +163,55 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         trolleyID2 = database.getReference().child("troli2").child("trolleyID");
         dbPitch = database.getReference().child("troli1").child("pitch");
         dbYaw = database.getReference().child("troli1").child("yaw");
+        latUser = database.getReference().child("troli1").child("userLat");
+        lonUser = database.getReference().child("troli1").child("userLon");
+
+        latUser.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                uLat = dataSnapshot.getValue(Double.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+        lonUser.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                uLon = dataSnapshot.getValue(Double.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
+        trolleyLat1.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                tLat = dataSnapshot.getValue(Double.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
+        trolleyLon1.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                tLon = dataSnapshot.getValue(Double.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
 
         if ((ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -367,7 +420,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                     "  incl: " + (int)(incl*rad2deg)
             );
             tvDegree.setText("Degree = " + String.valueOf(mOrientation[0]*rad2deg+180f));
-            tvPitch.setText("Pitch = "+ String.valueOf(mOrientation[1]*rad2deg));
+//            tvPitch.setText("Pitch = "+ String.valueOf(mOrientation[1]*rad2deg));
             tvYaw.setText("Yaw = "+String.valueOf(mOrientation[2]*rad2deg+180f));
             dbPitch.setValue(mOrientation[1]*rad2deg);
             dbYaw.setValue(mOrientation[2]*rad2deg+180f);
@@ -448,6 +501,8 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
         private DigitalOutput ConnectedLED;
 
         private float realSpeed = 50;
+        private float prevDeg = -1;
+        private double d = 0;
 
 
         @Override
@@ -465,7 +520,7 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             FrontLeftPWM.setDutyCycle(0);
 
             //Tahan sebelum ada user yang connect
-            while(connectedTo.equals("")) idle();
+            while(connectedTo=="") idle();
             //led_.write(false);
 
             ConnectedLED = ioio_.openDigitalOutput(8, true);
@@ -477,140 +532,69 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 refIdle.setValue(true);
             }
 
+            prevDeg = degree;
             led_.write(false);
-            if(FORWARD&&isStarted){
-                SPEED=78;//jika mau diganti jadi dynamic, hapus assignment speed ini
-                SPEED2=55;
-                FrontLeft(SPEED);//SPEED=78
-                FrontRight(SPEED2);//SPEED=55
-            }
 
-            else if(BACKWARD){
-                SPEED=1;
-                SPEED2=100;
-                FrontLeft(SPEED);//SPEED=1
-                FrontRight(-SPEED2);//SPEED2=-100
-
-            }
-
-            else if(RIGHT){
-                SPEED=78;
-                SPEED2=0;
-                FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
-                FrontRight(SPEED2);//SPEED2=0
-            }
-
-            else if(LEFT){
-                SPEED=0;
-                SPEED2=100;
-                FrontLeft(SPEED);//SPEED=0
-                FrontRight(SPEED2);//SPEED2=100
-            }
-
-            else if(turnLeft){
-                turn(45);
-            }
-            else if(turnRight){//pas pencet turn right di UI, langsung disconnect dan nggak mau terima input apapun lagi
-                turn(45);
-            //======================================================================
-//                private void turn(int angle) throws ConnectionLostException, InterruptedException{
+            d = calculateDist(uLat, uLon, tLat, tLon);
+            tvPitch.post(new Runnable() {
+                @Override
+                public void run() {
+                    tvPitch.setText(Double.toString(d));
+                }
+            });//dalam loop, harus pake post new Runnable
+            if(d < 3) {
+                idle();
+//                if(FORWARD&&isStarted){
+//                 forward(degree);
+//                }
+//
+//                else if(BACKWARD){
+//                    SPEED=1;
+//                    SPEED2=100;
+//                    FrontLeft(SPEED);//SPEED=1
+//                    FrontRight(-SPEED2);//SPEED2=-100
+//
+//                }
+//
+//                else if(RIGHT){
+//                    SPEED=78;
+//                    SPEED2=0;
+//                    FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
+//                    FrontRight(SPEED2);//SPEED2=0
+//                }
+//
+//                else if(LEFT){
 //                    SPEED=0;
 //                    SPEED2=100;
 //                    FrontLeft(SPEED);//SPEED=0
 //                    FrontRight(SPEED2);//SPEED2=100
-//                    currDegree = degree;
-//                    Boolean x = false;
-//                    Boolean y = false;
-//                    tvDirection.post(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            tvDirection.setText(strDirection());
-//                        }
-//                    });
-//
-//                    if(degree >=90){
-//                        currDegree = degree - 90f;
-//                        x=true;
-//                        y=false;
-//                    }
-//                    else if (degree<90){
-//                        currDegree = degree + 270f;
-//                        x=false;
-//                        y=true;
-//                    }
-//
-//
-//                    while(currDegree!=degree) {
-//                        if(x){
-//                            if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-//                                autoForward();
-//                                break;
-//                            }
-//                        }
-//                        if(y){
-//                            if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-//                                autoForward();
-//                                break;
-//                            }
-//                        }
-//                        else if(IDLE){
-//                            break;
-//                        }
-//                    }
-                //======================================================================
-//                SPEED=78;
-//                SPEED2=0;
-//                FrontLeft(SPEED);//SPEED=78, bisa diganti lebih lambat atau lebih cepat
-//                FrontRight(SPEED2);//SPEED2=0
-//                currDegree = degree;
-//                Boolean x=false, y=false;
-//                tvDirection.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        tvDirection.setText(strDirection());
-//                    }
-//                });
-//                if(degree >=270){
-//                    currDegree = degree - 270f;
-//                    x=true;
-//                    y=false;
-//                }
-//                else if (degree<270){
-//                    currDegree = degree + 90f;
-//                    x=false;
-//                    y=true;
 //                }
 //
-//                while(currDegree!=degree) {
-//                    if(x){
-//                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-//                            autoForward();
-//                            break;
-//                        }
-//                    }
-//                    if(y){
-//                        if(degree>=(currDegree-3f)&&degree<=currDegree+3f){
-//                            autoForward();
-//                            break;
-//                        }
-//                    }
-//                    else if(IDLE){
-//                        break;
-//                    }
+//                else if(turnLeft){
+//                    turn(45);
 //                }
+//                else if(turnRight){
+//                    turn(45);
+//                }
+//
+//                else if(IDLE){
+//                    SPEED=0;
+//                    SPEED2=0;
+//                    FrontRight(SPEED2);
+//                    FrontLeft(SPEED);
+//                }
+//
+//                else{
+//                    autoForward();
+//                }
+            }
+            else if(d>3) {
+                forward(degree);
             }
 
-            else if(IDLE){
-                SPEED=0;
-                SPEED2=0;
-                FrontRight(SPEED2);
-                FrontLeft(SPEED);
-            }
-
-            else{
-                autoForward();
-            }
             Thread.sleep(50);
+
+
         }
 
         public void FrontRight(float speed) throws ConnectionLostException, InterruptedException {
@@ -642,7 +626,17 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
                 FrontLeft_1.write(false);
             }
         }
-        private void turn(int angle) throws ConnectionLostException, InterruptedException{
+
+        private void forward(float d) throws ConnectionLostException, InterruptedException{
+            SPEED=78;//jika mau diganti jadi dynamic, hapus assignment speed ini
+            SPEED2=55;
+
+            FrontLeft(SPEED);//SPEED=78
+            FrontRight(SPEED2);//SPEED=55
+
+        }
+
+        public void turn(int angle) throws ConnectionLostException, InterruptedException{
 
             if(turnLeft) {
                 SPEED = 0;
@@ -852,5 +846,18 @@ public class  MainActivity extends IOIOActivity implements SensorEventListener, 
             trolleyID2.setValue("");
         }
     }
+
+    private double calculateDist(double latT, double lonT, double latU, double lonU){
+            double R = 6378.137; // Radius of earth in KM
+            double dLat = latU * Math.PI / 180 - latT * Math.PI / 180;
+        double dLon = lonU * Math.PI / 180 - lonT * Math.PI / 180;
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(latT * Math.PI / 180) * Math.cos(latU * Math.PI / 180) *
+                            Math.sin(dLon/2) * Math.sin(dLon/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        double d = R * c;
+            return d * 1000; // meters
+        //hasilnya kacau, jadinya 11 juta meter
+        }
 
 }
